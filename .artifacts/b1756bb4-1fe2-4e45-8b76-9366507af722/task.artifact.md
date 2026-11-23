@@ -1,0 +1,7 @@
+- [ ] **Fix Inflow/Outflow (MS API) & Expert Logic Overhaul**
+    - [ ] **Backend**: Update `getMetric` in `CryptoQuantScraper.ts` to support both standard and Multi-Series (MS) JSON structures.
+    - [ ] **Backend**: Use exact MS API IDs for BTC Inflow (`61762cae142904287d6a7f39`) and Outflow (`61762e8d142904287d6a7fa1`).
+    - [ ] **Frontend**: Implement the Final Combination Matrix (8 combos) in `market_signal_engine.dart`.
+    - [ ] **Frontend**: Add the "Contradiction Rule" (Price always wins) to the signal logic.
+    - [ ] **Frontend**: Set Reserve threshold to ±0.01%.
+    - [ ] **Verification**: Confirm Inflow/Outflow capture in backend logs and signal accuracy in the app.

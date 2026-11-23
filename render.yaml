@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cryptodatamonitor-backend
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: cd backend && npm install && npx playwright install --with-deps chromium && npm run build
+    startCommand: cd backend && node dist/Server.js
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: HEADLESS
+        value: "true"
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: "Crypto Data Monitor 24/7 Cloud"
