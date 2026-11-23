@@ -1,0 +1,10 @@
+{
+  "name": "cryptodatamonitor-root",
+  "version": "1.0.0",
+  "description": "Root configuration for Crypto Data Monitor 24/7 Cloud Deployment",
+  "main": "backend/dist/Server.js",
+  "scripts": {
+    "build": "cd backend && npm install && npx playwright install --with-deps chromium && npm run build",
+    "start": "cd backend && node dist/Server.js"
+  }
+}
