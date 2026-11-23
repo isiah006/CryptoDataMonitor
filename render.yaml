@@ -4,8 +4,7 @@ services:
     env: docker
     region: singapore
     plan: free
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: Dockerfile
     envVars:
       - key: NODE_ENV
         value: "production"
