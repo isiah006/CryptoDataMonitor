@@ -4,7 +4,7 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: if [ -d "backend" ]; then cd backend; fi && npm install && npx playwright install --with-deps chromium && npm run build
+    buildCommand: if [ -d "backend" ]; then cd backend; fi && npm install && npx playwright install chromium && npm run build
     startCommand: if [ -d "backend" ]; then cd backend; fi && node dist/Server.js
     envVars:
       - key: NODE_ENV
