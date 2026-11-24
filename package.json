@@ -4,7 +4,7 @@
   "description": "Root configuration for Crypto Data Monitor 24/7 Cloud Deployment",
   "main": "backend/dist/Server.js",
   "scripts": {
-    "build": "cd backend && npm run build",
-    "start": "cd backend && node dist/Server.js"
+    "build": "npx --prefix backend tsc -p backend/tsconfig.json",
+    "start": "node backend/dist/Server.js"
   }
 }

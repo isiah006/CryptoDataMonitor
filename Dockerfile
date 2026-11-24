@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy all project files
 COPY . .
 
-# Install dependencies and build TypeScript
-RUN cd backend && npm install && npm run build
+# Install dependencies and compile TypeScript directly via tsconfig
+RUN cd backend && npm install && npx tsc
 
 EXPOSE 10000
 
@@ -14,4 +14,4 @@ ENV PORT=10000
 ENV HEADLESS=true
 ENV NODE_ENV=production
 
-CMD ["sh", "-c", "cd backend && node dist/Server.js"]
+CMD ["node", "backend/dist/Server.js"]
