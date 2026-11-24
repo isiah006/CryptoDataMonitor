@@ -1,10 +1,11 @@
 {
   "name": "cryptodatamonitor-root",
   "version": "1.0.0",
+  "private": true,
   "description": "Root configuration for Crypto Data Monitor 24/7 Cloud Deployment",
   "main": "backend/dist/Server.js",
   "scripts": {
-    "build": "npx --prefix backend tsc -p backend/tsconfig.json",
-    "start": "node backend/dist/Server.js"
+    "build": "cd backend && npm install && npm run build",
+    "start": "cd backend && node dist/Server.js"
   }
 }

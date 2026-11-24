@@ -1,10 +1,12 @@
 services:
   - type: web
     name: cryptodatamonitor-backend
-    env: docker
+    env: node
+    rootDir: backend
     region: singapore
     plan: free
-    dockerfilePath: Dockerfile
+    buildCommand: npm install && npx playwright install chromium && npm run build
+    startCommand: node dist/Server.js
     envVars:
       - key: NODE_ENV
         value: "production"

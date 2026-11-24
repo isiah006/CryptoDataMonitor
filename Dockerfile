@@ -1,25 +1,18 @@
 FROM mcr.microsoft.com/playwright:v1.45.0-jammy
 
-WORKDIR /app/backend
+WORKDIR /app
 
-# Force development environment for npm install to ensure typescript & @types are installed
-ENV NODE_ENV=development
+# Copy files and install
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
 
-# Copy package files
-COPY backend/package*.json ./
-RUN npm install
-
-# Copy source code and configuration
-COPY backend/ ./
-
-# Compile TypeScript to dist
-RUN npx tsc
-
-# Runtime Environment
-ENV NODE_ENV=production
-ENV PORT=10000
-ENV HEADLESS=true
+COPY backend/ ./backend/
+RUN cd backend && npm run build
 
 EXPOSE 10000
 
-CMD ["node", "dist/Server.js"]
+ENV PORT=10000
+ENV HEADLESS=true
+ENV NODE_ENV=production
+
+CMD ["node", "backend/dist/Server.js"]
