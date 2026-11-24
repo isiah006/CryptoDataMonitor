@@ -2,11 +2,11 @@ FROM mcr.microsoft.com/playwright:v1.45.0-jammy
 
 WORKDIR /app
 
-# Copy all project files
+# Copy project files
 COPY . .
 
-# Install dependencies and compile TypeScript directly via tsconfig
-RUN cd backend && npm install && npx tsc
+# Install all dependencies (including TypeScript devDependencies) and build TypeScript
+RUN cd backend && npm install --include=dev && npm run build
 
 EXPOSE 10000
 
