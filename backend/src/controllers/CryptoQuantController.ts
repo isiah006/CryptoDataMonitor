@@ -231,6 +231,18 @@ class CryptoQuantController {
 
         } catch (error) {
 
+            Logger.warning(`Live fetch degraded: ${String(error)}. Serving cached fallback...`);
+
+            const cachedData = await PersistenceService.loadCache();
+            if (cachedData) {
+                res.json({
+                    ...cachedData,
+                    cachedFallback: true,
+                    message: "Live fetch degraded. Serving cached market snapshot."
+                });
+                return;
+            }
+
             this.handleError(
                 res,
                 error,

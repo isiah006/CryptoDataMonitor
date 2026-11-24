@@ -7,13 +7,13 @@ class CryptoQuantScraper {
      * Direct Chart API Fetcher
      */
     private async getChartDirect(chartId: string, metricName: string) {
-        await chromeConnector.connect();
-        const page = await chromeConnector.getPage();
-
-        const now = Date.now();
-        const url = `https://api.cryptoquant.com/live/v4/charts/${chartId}?window=DAY&from=1158854400000&to=${now}&limit=70000`;
-
         try {
+            await chromeConnector.connect();
+            const page = await chromeConnector.getPage();
+
+            const now = Date.now();
+            const url = `https://api.cryptoquant.com/live/v4/charts/${chartId}?window=DAY&from=1158854400000&to=${now}&limit=70000`;
+
             Logger.info(`Fetching ${metricName} via direct chart API...`);
             const response = await page.goto(url, {
                 waitUntil: "domcontentloaded",
@@ -99,12 +99,12 @@ class CryptoQuantScraper {
      * BTC PRICE
      */
     public async getBTCPrice() {
-        await chromeConnector.connect();
-        const page = await chromeConnector.getPage();
-
-        const priceUrl = "https://api.cryptoquant.com/live/v4/assets/61712eb35a176168a02409e8/now-price";
-
         try {
+            await chromeConnector.connect();
+            const page = await chromeConnector.getPage();
+
+            const priceUrl = "https://api.cryptoquant.com/live/v4/assets/61712eb35a176168a02409e8/now-price";
+
             Logger.info("Fetching BTC price via direct API navigation...");
 
             const response = await page.goto(priceUrl, {
