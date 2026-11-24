@@ -96,16 +96,50 @@ class CryptoQuantScraper {
     }
 
     /**
-     * BTC PRICE
+     * BTC PRICE (Binance REST API + CryptoQuant Playwright Fallback)
      */
     public async getBTCPrice() {
+        // 1. Try Binance Public REST API (Instant 0.1s response, zero Cloudflare block)
+        try {
+            Logger.info("Fetching Live BTC Price via Binance REST API...");
+            const binanceRes = await fetch("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT", {
+                headers: { "Accept": "application/json" }
+            });
+
+            if (binanceRes.ok) {
+                const binanceJson = await binanceRes.json();
+                if (binanceJson && binanceJson.lastPrice) {
+                    const price = Number(binanceJson.lastPrice);
+                    const changePercent24H = Number(binanceJson.priceChangePercent);
+                    const volume = Number(binanceJson.quoteVolume);
+                    const circulatingSupply = 20090000;
+                    const marketCap = Math.round(price * circulatingSupply);
+
+                    Logger.success(`LIVE BTC PRICE CAPTURED (Binance): $${price}`);
+
+                    return {
+                        success: true,
+                        price,
+                        changePercent24H,
+                        changePercent7D: changePercent24H,
+                        marketCap,
+                        volume,
+                        circulatingSupply
+                    };
+                }
+            }
+        } catch (e) {
+            Logger.warning(`Binance REST price fetch error: ${String(e)}. Trying CryptoQuant...`);
+        }
+
+        // 2. Fallback to CryptoQuant Playwright Browser Navigation
         try {
             await chromeConnector.connect();
             const page = await chromeConnector.getPage();
 
             const priceUrl = "https://api.cryptoquant.com/live/v4/assets/61712eb35a176168a02409e8/now-price";
 
-            Logger.info("Fetching BTC price via direct API navigation...");
+            Logger.info("Fetching BTC price via CryptoQuant API navigation...");
 
             const response = await page.goto(priceUrl, {
                 waitUntil: "domcontentloaded",
@@ -126,7 +160,7 @@ class CryptoQuantScraper {
                 };
             }
 
-            Logger.success(`BTC PRICE CAPTURED: ${json.price}`);
+            Logger.success(`BTC PRICE CAPTURED (CryptoQuant): ${json.price}`);
 
             return {
                 success: true,
@@ -138,7 +172,7 @@ class CryptoQuantScraper {
                 circulatingSupply: json.circulatingSupply
             };
         } catch (error) {
-            Logger.warning(`BTC price fetch error: ${String(error)}`);
+            Logger.warning(`CryptoQuant price fetch error: ${String(error)}`);
             return {
                 success: false,
                 message: error instanceof Error ? error.message : String(error)
