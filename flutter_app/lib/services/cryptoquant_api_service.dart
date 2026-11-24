@@ -20,7 +20,11 @@ class CryptoQuantApiService {
 
   static String get baseUrl {
     if (_customBaseUrl != null && _customBaseUrl!.trim().isNotEmpty) {
-      return _customBaseUrl!.trim();
+      String url = _customBaseUrl!.trim();
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://$url';
+      }
+      return url;
     }
     return defaultBaseUrl;
   }
@@ -35,7 +39,10 @@ class CryptoQuantApiService {
   static Future<void> setCustomBaseUrl(String newUrl) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final trimmed = newUrl.trim();
+      String trimmed = newUrl.trim();
+      if (trimmed.isNotEmpty && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        trimmed = 'https://$trimmed';
+      }
       if (trimmed.isEmpty || trimmed == defaultBaseUrl) {
         _customBaseUrl = null;
         await prefs.remove('custom_server_url');
@@ -52,11 +59,11 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       final response = await http.get(
         Uri.parse('$cleanBase/cryptoquant/btc'),
-      ).timeout(const Duration(seconds: 25));
+      ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode != 200) {
         throw Exception(
-          'Server error: ${response.statusCode}. Check if backend is reachable at $baseUrl',
+          'Server error: ${response.statusCode}. Check if backend is running at $baseUrl',
         );
       }
 
@@ -70,8 +77,8 @@ class CryptoQuantApiService {
 
       return CryptoQuantModel.fromJson(json);
     } catch (e) {
-      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException')) {
-        throw Exception('Server unreachable at $baseUrl. Check server status or settings.');
+      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException') || e.toString().contains('TimeoutException')) {
+        throw Exception('Server unreachable or waking up at $baseUrl. Check URL in Settings or try again.');
       }
       rethrow;
     }
@@ -83,7 +90,7 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       final response = await http.get(
         Uri.parse('$cleanBase/cryptoquant/cached-btc'),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode != 200) {
         return null;
@@ -104,7 +111,7 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       await http.delete(
         Uri.parse('$cleanBase/cryptoquant/clear-storage'),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
     } catch (_) {}
   }
 }
