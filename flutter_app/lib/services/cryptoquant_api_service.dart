@@ -7,6 +7,7 @@ import '../models/cryptoquant_model.dart';
 
 class CryptoQuantApiService {
   static String? _customBaseUrl;
+  static String? _deviceId;
 
   static String get defaultBaseUrl {
     if (kIsWeb) {
@@ -27,6 +28,31 @@ class CryptoQuantApiService {
       return url;
     }
     return defaultBaseUrl;
+  }
+
+  static Future<String> getOrCreateDeviceId() async {
+    if (_deviceId != null && _deviceId!.isNotEmpty) return _deviceId!;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var id = prefs.getString('device_unique_id');
+      if (id == null || id.isEmpty) {
+        id = 'dev_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecondsSinceEpoch % 8999))}';
+        await prefs.setString('device_unique_id', id);
+      }
+      _deviceId = id;
+      return id;
+    } catch (_) {
+      _deviceId = 'default_device';
+      return _deviceId!;
+    }
+  }
+
+  static Future<Map<String, String>> get _headers async {
+    final devId = await getOrCreateDeviceId();
+    return {
+      'X-Device-ID': devId,
+      'Accept': 'application/json',
+    };
   }
 
   static Future<void> loadCustomBaseUrl() async {
@@ -59,6 +85,7 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       final response = await http.get(
         Uri.parse('$cleanBase/cryptoquant/btc'),
+        headers: await _headers,
       ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode != 200) {
@@ -90,6 +117,7 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       final response = await http.get(
         Uri.parse('$cleanBase/cryptoquant/cached-btc'),
+        headers: await _headers,
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode != 200) {
@@ -111,6 +139,7 @@ class CryptoQuantApiService {
       final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
       await http.delete(
         Uri.parse('$cleanBase/cryptoquant/clear-storage'),
+        headers: await _headers,
       ).timeout(const Duration(seconds: 15));
     } catch (_) {}
   }

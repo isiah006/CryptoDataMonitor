@@ -58,8 +58,6 @@ class _CryptoQuantDashboardState extends State<CryptoQuantDashboard> {
         _isInitialized = true;
       });
     }
-
-    _syncCache();
   }
 
   Future<void> _loadLocalData() async {

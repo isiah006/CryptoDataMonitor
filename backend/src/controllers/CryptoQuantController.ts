@@ -5,27 +5,25 @@ import CoinglassService from "../services/CoinglassService";
 import Logger from "../utils/Logger";
 import PersistenceService from "../services/PersistenceService";
 
-// console.log("🔥🔥🔥 CryptoQuantController.ts LOADED 🔥🔥🔥");
-
 class CryptoQuantController {
+
+    private getDeviceId(req: Request): string {
+        const headerId = req.headers["x-device-id"];
+        if (typeof headerId === "string" && headerId.trim().length > 0) {
+            return headerId.trim();
+        }
+        return "default_device";
+    }
 
     private handleError(
         res: Response,
         error: unknown,
         context: string
     ): void {
-
         console.error(`${context}:`, error);
-
         res.status(500).json({
-
             success: false,
-
-            message:
-                error instanceof Error
-                    ? error.message
-                    : String(error)
-
+            message: error instanceof Error ? error.message : String(error)
         });
     }
 
@@ -33,21 +31,11 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
         try {
-
-            const result =
-                await CryptoQuantScraper.getExchangeInflow();
-
+            const result = await CryptoQuantScraper.getExchangeInflow();
             res.json(result);
-
         } catch (error) {
-
-            this.handleError(
-                res,
-                error,
-                "Exchange inflow fetch error"
-            );
+            this.handleError(res, error, "Exchange inflow fetch error");
         }
     }
 
@@ -55,21 +43,11 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
         try {
-
-            const result =
-                await CryptoQuantScraper.getExchangeOutflow();
-
+            const result = await CryptoQuantScraper.getExchangeOutflow();
             res.json(result);
-
         } catch (error) {
-
-            this.handleError(
-                res,
-                error,
-                "Exchange outflow fetch error"
-            );
+            this.handleError(res, error, "Exchange outflow fetch error");
         }
     }
 
@@ -77,21 +55,11 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
         try {
-
-            const result =
-                await CryptoQuantScraper.getExchangeReserve();
-
+            const result = await CryptoQuantScraper.getExchangeReserve();
             res.json(result);
-
         } catch (error) {
-
-            this.handleError(
-                res,
-                error,
-                "Exchange reserve fetch error"
-            );
+            this.handleError(res, error, "Exchange reserve fetch error");
         }
     }
 
@@ -99,21 +67,11 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
         try {
-
-            const result =
-                await CryptoQuantScraper.getOpenInterest();
-
+            const result = await CryptoQuantScraper.getOpenInterest();
             res.json(result);
-
         } catch (error) {
-
-            this.handleError(
-                res,
-                error,
-                "Open interest fetch error"
-            );
+            this.handleError(res, error, "Open interest fetch error");
         }
     }
 
@@ -121,39 +79,30 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
         try {
-
-            const result =
-                await CryptoQuantScraper.getFundingRates();
-
+            const result = await CryptoQuantScraper.getFundingRates();
             res.json(result);
-
         } catch (error) {
-
-            this.handleError(
-                res,
-                error,
-                "Funding rates fetch error"
-            );
+            this.handleError(res, error, "Funding rates fetch error");
         }
     }
 
     /**
-     * Get the last successful fetch from disk
+     * Get the last successful fetch for this specific device
      */
     public async getCachedBTCData(
         req: Request,
         res: Response
     ): Promise<void> {
         try {
-            const cachedData = await PersistenceService.loadCache();
+            const deviceId = this.getDeviceId(req);
+            const cachedData = await PersistenceService.loadCache(deviceId);
             if (cachedData) {
                 res.json(cachedData);
             } else {
                 res.status(404).json({
                     success: false,
-                    message: "No cached data found."
+                    message: `No cached data found for device: ${deviceId}`
                 });
             }
         } catch (error) {
@@ -165,37 +114,18 @@ class CryptoQuantController {
         req: Request,
         res: Response
     ): Promise<void> {
-
-        console.log("🔥🔥🔥  getBTCData CONTROLLER HIT 🔥🔥🔥");
+        const deviceId = this.getDeviceId(req);
+        console.log(`🔥🔥🔥 getBTCData CONTROLLER HIT FOR DEVICE: ${deviceId} 🔥🔥🔥`);
 
         try {
-
-            const btcPrice =
-                await CryptoQuantScraper.getBTCPrice();
-
-            console.log("🔥 BTC PRICE RESULT:");
-            console.log(btcPrice);
-
-            const exchangeInflow =
-                await CryptoQuantScraper.getExchangeInflow();
-
-            const exchangeOutflow =
-                await CryptoQuantScraper.getExchangeOutflow();
-
-            const exchangeReserve =
-                await CryptoQuantScraper.getExchangeReserve();
-
-            const openInterest =
-                await CryptoQuantScraper.getOpenInterest();
-
-            const fundingRates =
-                await CryptoQuantScraper.getFundingRates();
-
-            const longLiquidations =
-                await CryptoQuantScraper.getLongLiquidations();
-
-            const shortLiquidations =
-                await CryptoQuantScraper.getShortLiquidations();
+            const btcPrice = await CryptoQuantScraper.getBTCPrice();
+            const exchangeInflow = await CryptoQuantScraper.getExchangeInflow();
+            const exchangeOutflow = await CryptoQuantScraper.getExchangeOutflow();
+            const exchangeReserve = await CryptoQuantScraper.getExchangeReserve();
+            const openInterest = await CryptoQuantScraper.getOpenInterest();
+            const fundingRates = await CryptoQuantScraper.getFundingRates();
+            const longLiquidations = await CryptoQuantScraper.getLongLiquidations();
+            const shortLiquidations = await CryptoQuantScraper.getShortLiquidations();
 
             // Calculate Netflow for Arkham & Coinglass Flow Analysis
             const netVal = (exchangeInflow?.latestValue || 0) - (exchangeOutflow?.latestValue || 0);
@@ -207,7 +137,8 @@ class CryptoQuantController {
             const responseData = {
                 success: true,
                 asset: "BTC",
-                VERSION: "V3_GOTO_API_METHOD",
+                deviceId,
+                VERSION: "V3_MULTI_DEVICE_ISOLATED",
                 timestamp: new Date().toISOString(),
                 data: {
                     btcPrice: btcPrice || { success: false, message: "btcPrice was undefined" },
@@ -223,17 +154,16 @@ class CryptoQuantController {
                 }
             };
 
-            // PERSIST SUCCESSFUL FETCH
-            await PersistenceService.saveCache(responseData);
+            // PERSIST DEVICE-SPECIFIC FETCH
+            await PersistenceService.saveCache(responseData, deviceId);
 
-            Logger.info(`BTC Data Fetch Successful for ${responseData.asset}`);
+            Logger.info(`BTC Data Fetch Successful for ${responseData.asset} on Device ${deviceId}`);
             res.json(responseData);
 
         } catch (error) {
+            Logger.warning(`Live fetch degraded for device ${deviceId}: ${String(error)}. Serving cached fallback...`);
 
-            Logger.warning(`Live fetch degraded: ${String(error)}. Serving cached fallback...`);
-
-            const cachedData = await PersistenceService.loadCache();
+            const cachedData = await PersistenceService.loadCache(deviceId);
             if (cachedData) {
                 res.json({
                     ...cachedData,
@@ -252,14 +182,15 @@ class CryptoQuantController {
     }
 
     /**
-     * Wipe storage
+     * Wipe storage for this specific device
      */
     public async clearBTCData(
         req: Request,
         res: Response
     ): Promise<void> {
-        await PersistenceService.clearCache();
-        res.json({ success: true, message: "Storage wiped." });
+        const deviceId = this.getDeviceId(req);
+        await PersistenceService.clearCache(deviceId);
+        res.json({ success: true, message: `Storage wiped for device: ${deviceId}` });
     }
 
 }

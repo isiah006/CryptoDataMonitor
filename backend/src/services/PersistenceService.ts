@@ -3,7 +3,6 @@ import path from "path";
 import Logger from "../utils/Logger";
 
 const STORAGE_DIR = path.join(process.cwd(), "storage");
-const CACHE_FILE = path.join(STORAGE_DIR, "last_successful_fetch.json");
 
 class PersistenceService {
     constructor() {
@@ -18,35 +17,43 @@ class PersistenceService {
         }
     }
 
-    public async saveCache(data: any): Promise<void> {
+    private getCachePath(deviceId?: string): string {
+        const cleanId = (deviceId || "default_device").replace(/[^a-zA-Z0-9_-]/g, "_");
+        return path.join(STORAGE_DIR, `cache_${cleanId}.json`);
+    }
+
+    public async saveCache(data: any, deviceId?: string): Promise<void> {
         try {
-            await fs.writeJson(CACHE_FILE, {
+            const file = this.getCachePath(deviceId);
+            await fs.writeJson(file, {
                 ...data,
                 persistedAt: new Date().toISOString()
             }, { spaces: 2 });
-            Logger.success("Market data saved to backend storage.");
+            Logger.success(`Market data saved for device: ${deviceId || "default"}`);
         } catch (error) {
-            Logger.error("Failed to save market data to storage.");
+            Logger.error(`Failed to save market data for device: ${deviceId || "default"}`);
         }
     }
 
-    public async loadCache(): Promise<any | null> {
+    public async loadCache(deviceId?: string): Promise<any | null> {
         try {
-            if (await fs.pathExists(CACHE_FILE)) {
-                return await fs.readJson(CACHE_FILE);
+            const file = this.getCachePath(deviceId);
+            if (await fs.pathExists(file)) {
+                return await fs.readJson(file);
             }
         } catch (error) {
-            Logger.error("Failed to load market data from storage.");
+            Logger.error(`Failed to load market data for device: ${deviceId || "default"}`);
         }
         return null;
     }
 
-    public async clearCache(): Promise<void> {
+    public async clearCache(deviceId?: string): Promise<void> {
         try {
-            await fs.remove(CACHE_FILE);
-            Logger.warning("Backend storage cleared.");
+            const file = this.getCachePath(deviceId);
+            await fs.remove(file);
+            Logger.warning(`Backend storage cleared for device: ${deviceId || "default"}`);
         } catch (error) {
-            Logger.error("Failed to clear backend storage.");
+            Logger.error(`Failed to clear backend storage for device: ${deviceId || "default"}`);
         }
     }
 }
