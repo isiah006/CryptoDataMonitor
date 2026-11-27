@@ -14,6 +14,9 @@ flutter_app/build/
 flutter_app/.flutter-plugins
 flutter_app/.flutter-plugins-dependencies
 flutter_app/android/.gradle/
+flutter_app/android/.user_home/
+flutter_app/android/.android/
+flutter_app/android/.android_home/
 flutter_app/android/app/build/
 
 # IDE & System Files

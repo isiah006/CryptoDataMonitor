@@ -118,39 +118,65 @@ class CryptoQuantController {
         console.log(`🔥🔥🔥 getBTCData CONTROLLER HIT FOR DEVICE: ${deviceId} 🔥🔥🔥`);
 
         try {
-            const btcPrice = await CryptoQuantScraper.getBTCPrice();
-            const exchangeInflow = await CryptoQuantScraper.getExchangeInflow();
-            const exchangeOutflow = await CryptoQuantScraper.getExchangeOutflow();
-            const exchangeReserve = await CryptoQuantScraper.getExchangeReserve();
-            const openInterest = await CryptoQuantScraper.getOpenInterest();
-            const fundingRates = await CryptoQuantScraper.getFundingRates();
-            const longLiquidations = await CryptoQuantScraper.getLongLiquidations();
-            const shortLiquidations = await CryptoQuantScraper.getShortLiquidations();
+            // Load last saved cache for per-metric restoration fallback
+            const lastCache = await PersistenceService.loadCache(deviceId);
+            const prevData = lastCache?.data || {};
 
-            // Calculate Netflow for Arkham & Coinglass Flow Analysis
-            const netVal = (exchangeInflow?.latestValue || 0) - (exchangeOutflow?.latestValue || 0);
-            const reserveVal = exchangeReserve?.latestValue || 2700000;
+            // 1. Consolidated single-pass fetch (reduces browser navigations from 11 to 6)
+            const sc = await CryptoQuantScraper.getConsolidatedBTCData();
 
-            const arkhamData = await ArkhamService.getArkhamData(netVal, reserveVal);
-            const coinglassData = await CoinglassService.getCoinglassFlowData(netVal);
+            // 2. Fetch Arkham & Coinglass flow analysis
+            const arkhamData = await ArkhamService.getArkhamData(sc.netVal, sc.reserveVal);
+            const coinglassData = await CoinglassService.getCoinglassFlowData(sc.netVal);
+
+            // 3. Per-Metric Memory Restoration Helper
+            const restoreMetric = (current: any, prevKey: string) => {
+                if (current && current.success && current.latestValue !== undefined && current.latestValue !== null) {
+                    return current;
+                }
+                const prevMetric = prevData[prevKey];
+                if (prevMetric && prevMetric.success && prevMetric.latestValue !== undefined && prevMetric.latestValue !== null) {
+                    Logger.warning(`Metric '${prevKey}' live fetch was null. Restored from device memory (${prevMetric.latestValue}).`);
+                    return {
+                        ...prevMetric,
+                        restoredFromMemory: true
+                    };
+                }
+                return current || { success: false, message: "Metric unavailable" };
+            };
+
+            const restorePrice = (current: any) => {
+                if (current && current.success && current.price !== undefined && current.price !== null) {
+                    return current;
+                }
+                const prevPrice = prevData["btcPrice"];
+                if (prevPrice && prevPrice.success && prevPrice.price !== undefined && prevPrice.price !== null) {
+                    Logger.warning(`BTC Price live fetch was null. Restored from device memory ($${prevPrice.price}).`);
+                    return {
+                        ...prevPrice,
+                        restoredFromMemory: true
+                    };
+                }
+                return current || { success: false, message: "Price unavailable" };
+            };
 
             const responseData = {
                 success: true,
                 asset: "BTC",
                 deviceId,
-                VERSION: "V3_MULTI_DEVICE_ISOLATED",
+                VERSION: "V3_CONSOLIDATED_ZERO_NA",
                 timestamp: new Date().toISOString(),
                 data: {
-                    btcPrice: btcPrice || { success: false, message: "btcPrice was undefined" },
-                    exchangeInflowTotal: exchangeInflow,
-                    exchangeOutflowTotal: exchangeOutflow,
-                    exchangeReserve: exchangeReserve,
-                    openInterest: openInterest,
-                    fundingRates: fundingRates,
-                    longLiquidations: longLiquidations,
-                    shortLiquidations: shortLiquidations,
-                    arkhamIntelligence: arkhamData,
-                    coinglassFlows: coinglassData
+                    btcPrice: restorePrice(sc.btcPrice),
+                    exchangeInflowTotal: restoreMetric(sc.exchangeInflowTotal, "exchangeInflowTotal"),
+                    exchangeOutflowTotal: restoreMetric(sc.exchangeOutflowTotal, "exchangeOutflowTotal"),
+                    exchangeReserve: restoreMetric(sc.exchangeReserve, "exchangeReserve"),
+                    openInterest: restoreMetric(sc.openInterest, "openInterest"),
+                    fundingRates: restoreMetric(sc.fundingRates, "fundingRates"),
+                    longLiquidations: restoreMetric(sc.longLiquidations, "longLiquidations"),
+                    shortLiquidations: restoreMetric(sc.shortLiquidations, "shortLiquidations"),
+                    arkhamIntelligence: arkhamData || prevData["arkhamIntelligence"],
+                    coinglassFlows: coinglassData || prevData["coinglassFlows"]
                 }
             };
 

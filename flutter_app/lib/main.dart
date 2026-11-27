@@ -17,7 +17,7 @@ class CryptoDataMonitorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Crypto Data Monitor',
+      title: 'CryptDM',
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
@@ -240,7 +240,7 @@ class _CryptoQuantDashboardState extends State<CryptoQuantDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BTC Market Data'),
+        title: const Text('CryptDM', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -578,6 +578,7 @@ class _CryptoQuantDashboardState extends State<CryptoQuantDashboard> {
   }
 
   Widget _metricRow(String title, double? p, double? c, String u, {bool isRate = false}) {
+    final double? effectiveC = c ?? p;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -591,7 +592,7 @@ class _CryptoQuantDashboardState extends State<CryptoQuantDashboard> {
               children: [
                 Expanded(child: _valBox(p, u, isRate)),
                 const SizedBox(width: 12),
-                Expanded(child: _valBox(c, u, isRate, prevForChange: p)),
+                Expanded(child: _valBox(effectiveC, u, isRate, prevForChange: p)),
               ],
             ),
           ],
@@ -675,7 +676,7 @@ class _CryptoQuantDashboardState extends State<CryptoQuantDashboard> {
   }
 
   Widget _buildBtcPriceCard(BtcPriceData current, BtcPriceData? previous) {
-    final double? price = current.price;
+    final double? price = current.price ?? previous?.price;
     final double? prevPrice = previous?.price;
     return Card(
       color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),

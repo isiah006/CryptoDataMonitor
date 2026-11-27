@@ -67,37 +67,6 @@ class CryptoQuantScraper {
     }
 
     /**
-     * Internal Flow Calculator (Gross Turnover Model)
-     */
-    private async getExchangeFlowsInternal() {
-        const netflow = await this.getChartDirect("61a5fbaf45de34521f1dcad1", "Exchange Netflow");
-        if (!netflow.success || netflow.latestValue === undefined) {
-            return {
-                success: false,
-                message: netflow.message || "Failed to fetch netflow data"
-            };
-        }
-
-        const reserve = await this.getExchangeReserve();
-        const reserveVal = reserve.success && reserve.latestValue ? reserve.latestValue : 2700000;
-
-        // Baseline daily turnover estimated at ~0.5% of total exchange reserve
-        const baseline = Math.round(reserveVal * 0.005);
-        const netVal = netflow.latestValue;
-
-        const grossInflow = Math.round((baseline + (netVal > 0 ? netVal : 0)) * 100) / 100;
-        const grossOutflow = Math.round((baseline + (netVal < 0 ? Math.abs(netVal) : 0)) * 100) / 100;
-
-        return {
-            success: true,
-            latestTimestamp: netflow.latestTimestamp,
-            grossInflow,
-            grossOutflow,
-            totalPoints: netflow.totalPoints
-        };
-    }
-
-    /**
      * BTC PRICE (Binance REST API + CoinGecko REST API + CryptoQuant Playwright Fallback)
      */
     public async getBTCPrice() {
@@ -216,74 +185,100 @@ class CryptoQuantScraper {
     }
 
     /**
-     * EXCHANGE RESERVE
+     * Consolidated Single-Pass Metric Fetcher
+     * Avoids duplicate Playwright navigations to prevent browser rate-limit timeouts
      */
+    public async getConsolidatedBTCData() {
+        const btcPrice = await this.getBTCPrice();
+
+        const netflow = await this.getChartDirect("61a5fbaf45de34521f1dcad1", "Exchange Netflow");
+        const reserve = await this.getChartDirect("61a5fb0c45de34521f1dcaad", "Exchange Reserve");
+        const openInterest = await this.getChartDirect("61adc2916bc0e955292d727b", "Open Interest");
+        const fundingRates = await this.getChartDirect("61adc2ab6bc0e955292d7291", "Funding Rates");
+        const longLiquidations = await this.getChartDirect("61adc2c66bc0e955292d72b5", "Long Liquidations");
+        const shortLiquidations = await this.getChartDirect("61adc2cb6bc0e955292d72c6", "Short Liquidations");
+
+        const reserveVal = reserve.success && reserve.latestValue !== undefined ? reserve.latestValue : 2700000;
+        const baseline = Math.round(reserveVal * 0.005);
+        const netVal = netflow.success && netflow.latestValue !== undefined ? netflow.latestValue : 0;
+
+        const grossInflow = Math.round((baseline + (netVal > 0 ? netVal : 0)) * 100) / 100;
+        const grossOutflow = Math.round((baseline + (netVal < 0 ? Math.abs(netVal) : 0)) * 100) / 100;
+
+        const exchangeInflowTotal = netflow.success ? {
+            success: true,
+            latestTimestamp: netflow.latestTimestamp,
+            latestValue: grossInflow,
+            totalPoints: netflow.totalPoints
+        } : { success: false, message: "Netflow unavailable" };
+
+        const exchangeOutflowTotal = netflow.success ? {
+            success: true,
+            latestTimestamp: netflow.latestTimestamp,
+            latestValue: grossOutflow,
+            totalPoints: netflow.totalPoints
+        } : { success: false, message: "Netflow unavailable" };
+
+        return {
+            btcPrice,
+            exchangeInflowTotal,
+            exchangeOutflowTotal,
+            exchangeReserve: reserve,
+            openInterest,
+            fundingRates,
+            longLiquidations,
+            shortLiquidations,
+            netVal,
+            reserveVal
+        };
+    }
+
     public async getExchangeReserve() {
         return await this.getChartDirect("61a5fb0c45de34521f1dcaad", "Exchange Reserve");
     }
 
-    /**
-     * EXCHANGE INFLOW
-     */
     public async getExchangeInflow() {
-        const flows = await this.getExchangeFlowsInternal();
-        if (!flows.success || flows.grossInflow === undefined) {
-            return {
-                success: false,
-                message: flows.message || "Failed to calculate exchange inflow"
-            };
-        }
+        const netflow = await this.getChartDirect("61a5fbaf45de34521f1dcad1", "Exchange Netflow");
+        const reserve = await this.getExchangeReserve();
+        const reserveVal = reserve.success && reserve.latestValue ? reserve.latestValue : 2700000;
+        const baseline = Math.round(reserveVal * 0.005);
+        const netVal = netflow.success && netflow.latestValue ? netflow.latestValue : 0;
+        const grossInflow = Math.round((baseline + (netVal > 0 ? netVal : 0)) * 100) / 100;
         return {
-            success: true,
-            latestTimestamp: flows.latestTimestamp,
-            latestValue: flows.grossInflow,
-            totalPoints: flows.totalPoints
+            success: netflow.success,
+            latestTimestamp: netflow.latestTimestamp,
+            latestValue: grossInflow,
+            totalPoints: netflow.totalPoints
         };
     }
 
-    /**
-     * EXCHANGE OUTFLOW
-     */
     public async getExchangeOutflow() {
-        const flows = await this.getExchangeFlowsInternal();
-        if (!flows.success || flows.grossOutflow === undefined) {
-            return {
-                success: false,
-                message: flows.message || "Failed to calculate exchange outflow"
-            };
-        }
+        const netflow = await this.getChartDirect("61a5fbaf45de34521f1dcad1", "Exchange Netflow");
+        const reserve = await this.getExchangeReserve();
+        const reserveVal = reserve.success && reserve.latestValue ? reserve.latestValue : 2700000;
+        const baseline = Math.round(reserveVal * 0.005);
+        const netVal = netflow.success && netflow.latestValue ? netflow.latestValue : 0;
+        const grossOutflow = Math.round((baseline + (netVal < 0 ? Math.abs(netVal) : 0)) * 100) / 100;
         return {
-            success: true,
-            latestTimestamp: flows.latestTimestamp,
-            latestValue: flows.grossOutflow,
-            totalPoints: flows.totalPoints
+            success: netflow.success,
+            latestTimestamp: netflow.latestTimestamp,
+            latestValue: grossOutflow,
+            totalPoints: netflow.totalPoints
         };
     }
 
-    /**
-     * OPEN INTEREST
-     */
     public async getOpenInterest() {
         return await this.getChartDirect("61adc2916bc0e955292d727b", "Open Interest");
     }
 
-    /**
-     * FUNDING RATES
-     */
     public async getFundingRates() {
         return await this.getChartDirect("61adc2ab6bc0e955292d7291", "Funding Rates");
     }
 
-    /**
-     * LONG LIQUIDATIONS
-     */
     public async getLongLiquidations() {
         return await this.getChartDirect("61adc2c66bc0e955292d72b5", "Long Liquidations");
     }
 
-    /**
-     * SHORT LIQUIDATIONS
-     */
     public async getShortLiquidations() {
         return await this.getChartDirect("61adc2cb6bc0e955292d72c6", "Short Liquidations");
     }
